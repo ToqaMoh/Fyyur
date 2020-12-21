@@ -80,11 +80,30 @@ p.lead {
   font-size: 1.4rem;
 }
 
+.alert-ValidationError {
+  color: #000000;
+  background-color: #ff4a4a;
+  border-color: #ff4a4a;
+}
+
 .btn-default {
     border: none;
     background-color: #dde2e7;
     background-image: linear-gradient(#dde2e7,#dde2e7);
     color: #444;
+}
+
+.btn-edit {
+  border: none;
+  background-color: #0becae;
+  color: #444;
+}
+
+.btn-delete {
+  border: none;
+  background-color: #ff4a4a;
+  color: #444;
+  float: right;
 }
 
 #content h3 {
