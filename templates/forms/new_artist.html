@@ -2,7 +2,14 @@
 {% block title %}New Artist{% endblock %}
 {% block content %}
   <div class="form-wrapper">
+    {% for field, errors in form.errors.items() %}
+    <div class="alert alert-block alert-ValidationError fade in">
+      <a class="close" data-dismiss="alert">×</a>
+      {{ ', '.join(errors) }}
+    </div>
+    {% endfor %}
     <form method="post" class="form">
+      {{ form.csrf_token() }}
       <h3 class="form-heading">List a new artist</h3>
       <div class="form-group">
         <label for="name">Name</label>
@@ -26,13 +33,44 @@
       <div class="form-group">
         <label for="genres">Genres</label>
         <small>Ctrl+Click to select multiple</small>
-        {{ form.genres(class_ = 'form-control', placeholder='Genres, separated by commas', id=form.state, autofocus = true) }}
+        {{ form.genres(class_ = 'form-control', placeholder='Genres, separated by commas', id=form.genres, autofocus = true) }}
+      </div>
+      <div class="form-group">
+        <label>Image Link</label>
+        {{ form.image_link(class_ = 'form-control', placeholder='http://', id=form.image_link, autofocus = true) }}
       </div>
       <div class="form-group">
           <label for="genres">Facebook Link</label>
-          {{ form.facebook_link(class_ = 'form-control', placeholder='http://', id=form.state, autofocus = true) }}
+          {{ form.facebook_link(class_ = 'form-control', placeholder='http://', id=form.facebook_link, autofocus = true) }}
         </div>
-      <input type="submit" value="Create Venue" class="btn btn-primary btn-lg btn-block">
+      <div class="form-group">
+          <label>Website</label>
+          {{ form.website(class_ = 'form-control', placeholder='www.example.com', id=form.website, autofocus = true) }}
+      </div>
+      <div class="form-group">
+        <label>Seeking Venue?</label>
+        {{ form.seeking_description(class_ = 'form-control', placeholder='Description', id=form.seeking_description, autofocus = true) }}
+      </div>
+      <div class="form-group">
+        {{ form.submit(class="btn btn-primary btn-lg btn-block")}}
+    </div>
+      <!-- <input type="submit" value="Create Artist" class="btn btn-primary btn-lg btn-block"> -->
     </form>
   </div>
+
+  <script>
+
+    // const PhoneField = document.getElementById('phone');
+    // PhoneField.onkeyup = function(e) {
+    //   debugger
+    //   var phoneNumber = this.value.split("-").join("");
+    //   if (phoneNumber.length > 0) {
+    //     if(phoneNumber.length <= 6){
+    //     phoneNumber = phoneNumber.match(new RegExp('.{1,3}', 'g')).join("-");
+    //     }
+    //   }
+    //   this.value = phoneNumber
+    // }
+    
+  </script>
 {% endblock %}
