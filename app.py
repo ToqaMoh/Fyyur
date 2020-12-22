@@ -5,9 +5,17 @@
 import json
 import dateutil.parser
 import babel
-import datetime
 import time
-from flask import Flask, render_template, request, Response, flash, redirect, url_for
+from flask import (
+Flask,
+render_template,
+request,
+Response,
+flash,
+redirect,
+url_for
+)
+from models import app, db, Cities, Venues, Artists, Shows
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -21,207 +29,13 @@ import re
 # App Config.
 #----------------------------------------------------------------------------#
 
-app = Flask(__name__)
 moment = Moment(app)
 app.config.from_object('config')
-db = SQLAlchemy(app)
-migrate = Migrate(app, db)
+db.init_app(app)
+
 
 # TODO: connect to a local postgresql database  ** DONE **
 
-#----------------------------------------------------------------------------#
-# Models.
-#----------------------------------------------------------------------------#
-
-
-class Cities(db.Model):
-  __tablename__ = 'cities'
-  id = db.Column(db.Integer, nullable=False, primary_key=True)
-  cityname = db.Column(db.String(120), nullable=False)
-  state = db.Column(db.String(120), nullable=False)
-  venues = db.relationship('Venues', backref='venues_city', lazy=True)
-
-  def __init__(self, cityname, state, venues):
-    self.cityname = cityname
-    self.state = state
-    self.venues = venues
-
-  def cityDict(self):
-    return(
-      {
-        "id": self.id, "cityname": self.cityname, "state": self.state , "venues": [ Venues.venueDict(venue) for venue in self.venues ]
-      }
-    ) 
-
-
-class Shows(db.Model):
-  __tablename__ = 'shows'
-  id = db.Column(db.Integer, nullable=False, primary_key=True)
-  start_time = db.Column(db.DateTime, nullable=False, default=datetime.now().isoformat())
-  venue_id = db.Column(db.Integer, db.ForeignKey('venues.id', ondelete='CASCADE'), nullable=False)
-  venue_name = db.Column(db.String, nullable=False)
-  venue_image_link = db.Column(db.String(500))
-  artist_id = db.Column(db.Integer, db.ForeignKey('artists.id'), nullable=False)
-  artist_name = db.Column(db.String, nullable=False)
-  artist_image_link = db.Column(db.String(500))
-
-  def __init__(self, start_time, venue_id, venue_name, venue_image_link, artist_id, artist_name, artist_image_link):
-    self.start_time = start_time
-    self.venue_id = venue_id
-    self.venue_name = venue_name
-    self.venue_image_link = venue_image_link
-    self.artist_id = artist_id
-    self.artist_name = artist_name
-    self.artist_image_link = artist_image_link
-
-  def showDict(self):
-    return(
-      {
-        "id": self.id, "start_time": self.start_time, "venue_id": self.venue_id, "venue_name": self.venue_name, "venue_image_link": self.venue_image_link, "artist_id": self.artist_id, "artist_name": self.artist_name, "artist_image_link": self.artist_image_link
-      }
-    ) 
-
-class Venues(db.Model):
-  __tablename__ = 'venues'
-
-  id = db.Column(db.Integer, primary_key=True)
-  name = db.Column(db.String, nullable=False)
-  city = db.Column(db.String(120), nullable=False)
-  state = db.Column(db.String(120), nullable=False)
-  address = db.Column(db.String(120))
-  phone = db.Column(db.String(120))
-  image_link = db.Column(db.String(500))
-  facebook_link = db.Column(db.String(120))
-  website = db.Column(db.String(120))
-  genres = db.Column(db.ARRAY(db.String()))
-  seeking_talent = db.Column(db.Boolean, default=False)
-  seeking_description = db.Column(db.String(500))
-  past_shows = db.Column(db.ARRAY(db.String()))
-  upcoming_shows = db.Column(db.ARRAY(db.String()))
-  past_shows_count = db.Column(db.Integer)
-  upcoming_shows_count = db.Column(db.Integer)
-  city_id = db.Column(db.Integer, db.ForeignKey('cities.id'), nullable=False)
-  shows = db.relationship('Shows', backref='venue_shows', passive_deletes=True, lazy=True) 
-
-
-  def __init__(self, name, city, state, address, phone, image_link, facebook_link, website, genres, seeking_talent, seeking_description, city_id):
-    self.name = name
-    self.city = city
-    self.state = state
-    self.address = address
-    self.phone = phone
-    self.image_link = image_link
-    self.facebook_link = facebook_link
-    self.website = website
-    self.genres = genres
-    self.seeking_talent = seeking_talent
-    self.seeking_description = seeking_description
-    self.city_id = city_id
-
-  def __repr__(self):
-    return f'"id" = {self.id},"name" = {self.name},"city" = {self.city},"state" = {self.state},"address" = {self.address},"phone" = {self.phone},"image_link" = {self.image_link},"facebook_link" = {self.facebook_link},"website" = {self.website},"genres" = {self.genres},"seeking_talent" = {self.seeking_talent},"seeking_description" = {self.seeking_description},"city_id" = {self.city_id}'
-
-
-  def venueDict(self):
-    return(
-      {
-        "id": self.id, "name": self.name, "city": self.city, "state": self.state, "address": self.address, "phone": self.phone, "image_link": self.image_link, "facebook_link": self.facebook_link, "website": self.website, "genres": self.genres, "seeking_talent": self.seeking_talent, "seeking_description": self.seeking_description, "city_id": self.city_id, "shows": [ Shows.showDict(show) for show in self.shows ]
-      }
-    )
-
-  def getVenuePastUpcomingShows(self):
-
-    pshows = []
-    upcshows = []
-
-    for show in self.shows:
-      if show.start_time <= datetime.now():
-        pshows.append(show)
-      elif show.start_time > datetime.now():
-        upcshows.append(show)
-       
-    self.past_shows = pshows
-    self.past_shows_count = len(self.past_shows)
-    self.upcoming_shows = upcshows
-    self.upcoming_shows_count = len(self.upcoming_shows)
-    
-    return "Done"
-
-
-
-    # TODO: implement any missing fields, as a database migration using Flask-Migrate ** DONE **
-
-class Artists(db.Model):
-  __tablename__ = 'artists'
-
-  id = db.Column(db.Integer, primary_key=True)
-  name = db.Column(db.String, nullable=False)
-  city = db.Column(db.String(120))
-  state = db.Column(db.String(120))
-  phone = db.Column(db.String(120))
-  website = db.Column(db.String(120))
-  image_link = db.Column(db.String(500))
-  facebook_link = db.Column(db.String(120))
-  genres = db.Column(db.ARRAY(db.String()))
-  seeking_venue = db.Column(db.Boolean, default=False)
-  seeking_description = db.Column(db.String(500))
-  past_shows = db.Column(db.ARRAY(db.String()))
-  upcoming_shows = db.Column(db.ARRAY(db.String()))
-  past_shows_count = db.Column(db.Integer)
-  upcoming_shows_count = db.Column(db.Integer)
-  shows = db.relationship('Shows', backref='artist_shows', lazy=True)
-
-
-  def __init__(self, name, city, state, phone, website, image_link, facebook_link, genres, seeking_venue, seeking_description):
-    self.name = name
-    self.city = city
-    self.state = state
-    self.phone = phone
-    self.website = website
-    self.image_link = image_link
-    self.facebook_link = facebook_link
-    self.genres = genres
-    self.seeking_venue = seeking_venue
-    self.seeking_description = seeking_description
-
-  def __repr__(self):
-    return f'< Artist: {self.id}) {self.name} >'
-
-  
-  def getArtistPastUpcomingShows(self):
-
-    artistpshows = []
-    artistupcshows = []
-
-    for show in self.shows:
-      if show.start_time <= datetime.now():
-        artistpshows.append(show)
-      elif show.start_time > datetime.now():
-        artistupcshows.append(show)
-       
-    self.past_shows = artistpshows
-    self.past_shows_count = len(self.past_shows)
-    self.upcoming_shows = artistupcshows
-    self.upcoming_shows_count = len(self.upcoming_shows)
-    
-    return "Done"
-
-
-
-    # TODO: implement any missing fields, as a database migration using Flask-Migrate ** DONE **
-
-
-  
-  def artistDict(self):
-    return(
-      {
-        "id": self.id, "name": self.name, "city": self.city, "state": self.state, "phone": self.phone, "website": self.website, "image_link": self.image_link, "facebook_link": self.facebook_link, "genres": self.genres, "seeking_venue": self.seeking_venue, "seeking_description": self.seeking_description, "shows": [ Shows.showDict(show) for show in self.shows ]
-      }
-    )
-
-    # TODO: implement any missing fields, as a database migration using Flask-Migrate ** DONE **
-
-# TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration. ** DONE **
 
 #----------------------------------------------------------------------------#
 # Filters.
@@ -383,11 +197,38 @@ def show_venue(venue_id):
 
   #data = list(filter(lambda d: d['id'] == venue_id, [data1, data2, data3]))[0]
 
-  data = Venues.query.get(venue_id)
-  Venues.getVenuePastUpcomingShows(data)
-  print(data.venueDict())
+  venue = Venues.query.get(venue_id)
+  shows_details = db.session.query(Shows).join(Artists).filter(Shows.venue_id==venue_id).all()
+  upcoming_shows_data=[]
+  past_shows_data=[]
 
-  return render_template('pages/show_venue.html', venue=data)
+  for show in shows_details:
+    if show.start_time > datetime.now():
+      upcoming_shows_data.append({
+        'artist_id': show.artist_id,
+        'artist_name': show.artist_name,
+        'artist_image_link': show.artist_image_link,
+        'start_time': show.start_time.strftime('%Y-%m-%d %H:%M:%S')
+      })
+    elif show.start_time <= datetime.now():
+      past_shows_data.append({
+        'artist_id': show.artist_id,
+        'artist_name': show.artist_name,
+        'artist_image_link': show.artist_image_link,
+        'start_time': show.start_time.strftime('%Y-%m-%d %H:%M:%S')
+      })
+
+  def getVenueData(venue):
+    return(
+      {
+        "id": venue.id, "name": venue.name, "city": venue.city, "state": venue.state, "address": venue.address, "phone": venue.phone, "image_link": venue.image_link, "facebook_link": venue.facebook_link, "website": venue.website, "genres": venue.genres, "seeking_talent": venue.seeking_talent, "seeking_description": venue.seeking_description, "past_shows": past_shows_data, "upcoming_shows": upcoming_shows_data, "past_shows_count": len(past_shows_data), "upcoming_shows_count": len(upcoming_shows_data)
+      }
+    )
+  VenueData = getVenueData(venue)
+  # Venues.getVenuePastUpcomingShows(data)
+  # print(data.venueDict())
+
+  return render_template('pages/show_venue.html', venue=VenueData)
 
 #  Create Venue
 #  ----------------------------------------------------------------
@@ -602,11 +443,40 @@ def show_artist(artist_id):
   }
   #data = list(filter(lambda d: d['id'] == artist_id, [data1, data2, data3]))[0]
 
-  data = Artists.query.get(artist_id)
-  Artists.getArtistPastUpcomingShows(data)
-  print(data.artistDict())
+  artist = Artists.query.get(artist_id)
+  shows_details = db.session.query(Shows).join(Venues).filter(Shows.artist_id==artist_id).all()
+  upcoming_shows_data=[]
+  past_shows_data=[]
 
-  return render_template('pages/show_artist.html', artist=data)
+  for show in shows_details:
+    print(show.id)
+    if show.start_time > datetime.now():
+      upcoming_shows_data.append({
+        'venue_id': show.venue_id,
+        'venue_name': show.venue_name,
+        'venue_image_link': show.venue_image_link,
+        'start_time': show.start_time.strftime('%Y-%m-%d %H:%M:%S')
+      })
+    elif show.start_time <= datetime.now():
+      past_shows_data.append({
+        'venue_id': show.venue_id,
+        'venue_name': show.venue_name,
+        'venue_image_link': show.venue_image_link,
+        'start_time': show.start_time.strftime('%Y-%m-%d %H:%M:%S')
+      })
+
+  def getArtistData(artist):
+    return(
+      {
+        "id": artist.id, "name": artist.name, "city": artist.city, "state": artist.state, "phone": artist.phone, "image_link": artist.image_link, "facebook_link": artist.facebook_link, "website": artist.website, "genres": artist.genres, "seeking_venue": artist.seeking_venue, "seeking_description": artist.seeking_description, "past_shows": past_shows_data, "upcoming_shows": upcoming_shows_data, "past_shows_count": len(past_shows_data), "upcoming_shows_count": len(upcoming_shows_data)
+      }
+    )
+  ArtistData = getArtistData(artist)
+
+  # Artists.getArtistPastUpcomingShows(data)
+  # print(data.artistDict())
+
+  return render_template('pages/show_artist.html', artist=ArtistData)
 
 #  Update
 #  ----------------------------------------------------------------
