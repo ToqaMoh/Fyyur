@@ -1,7 +1,7 @@
 #----------------------------------------------------------------------------#
 # Imports
 #----------------------------------------------------------------------------#
-
+#
 import json
 import dateutil.parser
 import babel
@@ -238,15 +238,6 @@ def format_datetime(value, format='medium'):
 
 app.jinja_env.filters['datetime'] = format_datetime
 
-
-'''def datetime_to_isoformat(value):
-  print(str(value))
-  date_parts = [int(d) for d in re.split(r'[:\-\. ]', value)]
-  if len(date_parts) > 6:
-      tenths = date_parts[6]
-      date_parts[6] = tenths * 100000
-  timestamp = datetime(*date_parts).isoformat()
-  return timestamp''' 
 
 #----------------------------------------------------------------------------#
 # Controllers.
